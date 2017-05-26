@@ -1,3 +1,9 @@
+# npm packages
+game/node_modules
+
+# private config
+js/private.js
+
 # Windows image file caches
 Thumbs.db
 ehthumbs.db
