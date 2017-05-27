@@ -1,0 +1,48 @@
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		
+		<script src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha256-cCueBR6CsyA4/9szpPfrX3s49M9vUU5BgtiJj06wt/s=" crossorigin="anonymous"></script>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+		
+		<script src="../js/knockout-3.4.2.js"></script>
+		<script src="lab2.js"></script>
+	</head>
+	<body>
+		<div class="container-fluid">
+			<div class="row">
+				<div class="col-xs-12">
+				
+					
+					<game-chat params="
+						nickName: 'This is my nickName',
+						chatOverflow: 10,
+						bannedWords: ['co construct', 'scope creep']
+					"></game-chat>
+				
+				
+				<div class="bt-chat">
+					<div class="bt-chat--messages" data-bind="foreach: { data: messages, afterAdd: scollMessages }">
+						<div class="bt-chat--message" data-bind="css: type">
+							<span class="bt-chat--message-nickName" data-bind="text: $data.nickName"></span>: 
+							<span data-bind="text: $data.message"></span>
+						</div>
+					</div>
+					<input class="form-control bt-chat--message-box" type="text" data-bind="textinput: messageDraft, enterkey: sendMessage" />
+				</div>
+				
+			</div>
+		</div>
+		
+		<style type="text/css">
+			body {
+				background: #222;
+				color: #eee;
+			}
+		</style>
+		
+	</body>
+</html>

@@ -83,6 +83,7 @@ $(document).ready(function(){
 		var mainConnection = new Peer({key: window.peerJSApiKey});
 		
 		mainConnection.on('open', function(id){
+			debugger;
 			// connection opened
 			root.me.id(id);
 			

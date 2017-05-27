@@ -20,36 +20,35 @@
 	<body>
 		<div class="container-fluid">
 			<div class="row">
-				<div class="col-xs-12">		
-					Player ID: <span data-bind="text: me.id"></span><br>
+				<div class="col-xs-12">
+					<div class="connectionInfo">
+						Player ID: <span data-bind="text: me.id"></span><br>
+						
+						<div class="form-group">
+							<label for="roomID">Game Room:</label>
+							<input class="form-control" id="roomID" type="text" />
+						</div>
+						
+						<div class="form-group">
+							<label for="nickName">Your Nickname:</label>
+							<input class="form-control" id="nickName" type="text" data-bind="value: me.nickName" />
+						</div>
+						
+						<input id="joinGame" class="btn btn-default" type="button" value="Join Room" />
+						
+						
+						<h1 data-bind="visible: gameStarted">Waiting for other connections</h1>
+						<h1 data-bind="visible: !gameStarted">Setting up game</h1>
 					
-					<div class="form-group">
-						<label for="roomID">Game Room:</label>
-						<input class="form-control" id="roomID" type="text" />
+						
+						<br><br>
+						<!-- ko foreach: connectedPeers -->
+							<div data-bind="text: $data.label"></div><br>
+							<div data-bind="text: $data.peer"></div><br>
+							<div data-bind="text: $data.metadata"></div><br>
+						<!-- /ko -->
+						<br><br>
 					</div>
-					
-					<div class="form-group">
-						<label for="nickName">Your Nickname:</label>
-						<input class="form-control" id="nickName" type="text" data-bind="value: me.nickName" />
-					</div>
-					
-					<input id="joinGame" class="btn btn-default" type="button" value="Join Room" />
-					
-					
-					<h1 data-bind="visible: gameStarted">Waiting for other connections</h1>
-					<h1 data-bind="visible: !gameStarted">Setting up game</h1>
-					
-					
-					<br><br>
-					<!-- ko foreach: connectedPeers -->
-						<div data-bind="text: $data.label"></div><br>
-						<div data-bind="text: $data.peer"></div><br>
-						<div data-bind="text: $data.metadata"></div><br>
-					<!-- /ko -->
-					<br><br>
-					
-					
-					
 				</div>
 				<div class="bt-chat">
 					<div class="bt-chat--messages" data-bind="foreach: { data: messages, afterAdd: scollMessages }">
@@ -74,6 +73,13 @@
 				top: 0;
 				left: 0;
 				z-index: 1;
+			}
+			
+			.connectionInfo {
+				position: fixed;
+				top: 0;
+				left: 0;
+				z-index: 9;
 			}
 		
 			.bt-chat {
