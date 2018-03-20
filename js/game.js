@@ -1,231 +1,200 @@
-ko.bindingHandlers.enterkey = {
-    init: function (element, valueAccessor, allBindings, viewModel) {
-        var callback = valueAccessor();
-        $(element).keypress(function (event) {
-            var keyCode = (event.which ? event.which : event.keyCode);
-            if (keyCode === 13) {
-                callback.call(viewModel);
-                return false;
-            }
-            return true;
+
+var mainConnection;
+function bindEvents(connection, isMainConnection, initialDataToSend) {
+    if (!isMainConnection) {
+        window.rootVM.connectedPeers.push(connection);
+    }
+
+    connection.on('open', function (id) {
+        if (isMainConnection) { // setup server
+            //gameFN = setInterval(gameEngine.runGame, 50);
+        }
+        else { // Send handshake from client to server
+            connection.send(initialDataToSend);
+        }
+    });
+    connection.on('close', function (peer) {
+        if (connection.metadata) {
+            GlobalFunctions.onDisconnect({ nickName: connection.metadata.nickName });
+        }
+        if (window.rootVM.connectedPeers().length > 0) {
+            window.game.emit("playerLeft", undefined, {
+                peer: connection.peer
+            });
+
+            window.rootVM.connectedPeers.remove(function (p) {
+                return p.peer === connection.peer;
+            });
+        }
+    });
+    connection.on('data', function (data) {
+        // Add data.peer to every response so we know who it came from
+        data.peer = connection.peer;
+        gameEngine.dataReceived(data);
+    });
+    connection.on('error', function (err) {
+        console.log(err);
+    });
+
+
+
+    connection.on('connection', function (conn) {
+        GlobalFunctions.onConnect({ nickName: "users name" });
+
+        window.rootVM.connectedPeers.push(conn);
+
+        // When opening a connection to a new client
+        conn.on('open', function () {
+            // send a response handshake to the client
+            // send all the connections so the client can connect with them
+            conn.send({
+                metadata: {
+                    type: 'peerTransfer',
+                    nickName: window.rootVM.me.nickName(),
+                    skin: window.rootVM.me.skin(),
+                    connectedPeers: window.rootVM.connectedPeers().map(function (x) {
+                        return x.peer;
+                    })
+                }
+            });
         });
+        conn.on('close', function (peer) {
+            if (connection.metadata) {
+                GlobalFunctions.onDisconnect({ nickName: connection.metadata.nickName });
+            }
+            if (window.rootVM.connectedPeers().length > 0) {
+                window.game.emit("playerLeft", undefined, {
+                    peer: connection.peer
+                });
+
+                window.rootVM.connectedPeers.remove(function (p) {
+                    return p.peer === connection.peer;
+                });
+            }
+        });
+
+        // Data received from client. Yes we need both
+        conn.on('data', function (data) {
+            // Add data.peer to every response so we know who it came from
+            data.peer = conn.peer;
+            gameEngine.dataReceived(data);
+        });
+
+        conn.on('error', function (err) {
+            console.log(err);
+        });
+    });
+}
+
+var gameEngine = {
+    listenForConnections: function (gameRoomName) {
+        // list for connections on gameRoomName
+        mainConnection = new Peer(gameRoomName, { key: window.peerJSApiKey });
+
+        bindEvents(mainConnection, true, {
+            metadata: {
+                type: 'handshake',
+                nickName: window.rootVM.me.nickName(),
+                skin: window.rootVM.me.skin()
+            }
+        });
+
+        // Make sure things clean up properly
+        window.onunload = window.onbeforeunload = function (e) {
+            // disconnect from other players
+            mainConnection.disconnect();
+
+            if (!!mainConnection && !mainConnection.destroyed) {
+                mainConnection.destroy();
+            }
+        };
+    },
+    connectToPlayer: function (peerID) {
+        // verify we haven't already connected to this client
+        var checkForAlreadyConnected = window.rootVM.connectedPeers().find(function (x) {
+            return x.peer === peerID;
+        })
+
+        if (checkForAlreadyConnected || mainConnection.id === peerID) { // or its ourselves
+            console.log("Attempted to establish a connection to a player who is already connected.");
+            return;
+        }
+
+        // Start a connection, send the players name
+        var newPeer = mainConnection.connect(peerID, {
+            metadata: {
+                nickName: window.rootVM.me.nickName(),
+                skin: window.rootVM.me.skin()
+            }
+        });
+
+        bindEvents(newPeer, false, {
+            metadata: {
+                type: 'handshake',
+                nickName: window.rootVM.me.nickName(),
+                skin: window.rootVM.me.skin()
+            }
+        });
+
+    },
+    broadcast: function (object) {
+        // Goes through each active peer and calls FN on its connections.
+        if (window.rootVM.connectedPeers().length > 0) {
+            window.rootVM.connectedPeers().forEach(function (c) {
+                c.send({
+                    metadata: object
+                });
+            });
+        }
+    },
+
+    broadcastMessage: function (nickName, message) {
+        gameEngine.broadcast({
+            type: 'chat',
+            nickName: nickName,
+            message: message
+        });
+    },
+
+    dataReceived: function (data) {
+        if (data.metadata && data.metadata.type) {
+            // add peer to metadata
+            data.metadata.peer = data.peer;
+
+            switch (data.metadata.type) {
+                case "handshake": // share data with the client
+                    if (window.enableGame) {
+                        window.game.emit("playerJoin", undefined, data.metadata);
+                    }
+                    break;
+
+                case "peerTransfer": // the server has sent over a list of peers, we need to connect to all of them
+                    if (window.enableGame) {
+                        window.game.emit("playerJoin", undefined, data.metadata);
+                    }
+
+                    // connect to each peer in the game
+                    data.metadata.connectedPeers.forEach(function (p) {
+                        gameEngine.connectToPlayer(p);
+                    });
+                    break
+
+                case "updatePlayer": // run changes in-game
+                    if (window.enableGame) {
+                        window.game.emit("updatePlayer", "playerID", data.metadata);
+                    }
+                    break;
+
+                case "updateBlock":
+                    if (window.enableGame) {
+                        window.game.emit("updateBlock", "playerID", data.metadata);
+                    }
+                    break;
+
+                case "chat": // display message in chatroom
+                    GlobalFunctions.onMessageReceived(data.metadata);
+                    break;
+            }
+        }
     }
 };
-
-$(document).ready(function(){
-	
-	var page = function() {
-		var root = this;
-		
-		root.me = {
-			id: ko.observable(),
-			nickName: ko.observable()
-		};
-		root.gameStarted = ko.observable(false);
-		root.connectedPeers = ko.observableArray();
-		
-		root.messages = ko.observableArray();
-		root.messages.subscribe(function(newArray){
-			// only keep the first 10 messages
-			if (newArray.length > 10) {
-				root.messages().shift();
-			}
-		});
-		root.scollMessages = function(){
-			// scroll the messages to the bottom
-			var $Messages = $(".bt-chat--messages")[0];
-			$Messages.scrollTop = $Messages.scrollHeight;
-		}
-		
-		root.messageDraft = ko.observable("");
-		root.sendMessage = function() {
-			// StrechGoal: Throttle how many messages the user can send per minute
-			// send the message when the user hits the return key
-			var msg = new message({
-				nickName: root.me.nickName(),
-				message: root.messageDraft()
-			});
-			broadcastMessage(msg)
-			root.messages.push(msg);
-			
-			
-			// clear out message draft for the next message
-			root.messageDraft("");
-		}
-		
-		// Goes through each active peer and calls FN on its connections.
-		function broadcast(object) {
-			root.connectedPeers().forEach(function(c){
-				c.send(object);
-			});
-		}
-		
-		function peerError(err) {
-			console.log(err);
-		}
-		
-		
-		function broadcastMessage(msg) {
-			if (!(msg instanceof message)) {
-				throw "You must pass a message type";
-			}
-			
-			broadcast({
-				metadata: {
-					type: 'chat',
-					nickName: msg.nickName,
-					message: msg.message
-				}
-			});
-		}
-		
-		
-		var mainConnection = new Peer({key: window.peerJSApiKey});
-		
-		mainConnection.on('open', function(id){
-			debugger;
-			// connection opened
-			root.me.id(id);
-			
-			root.gameStarted(true);
-			var game = setInterval(runGame, 1000);
-			
-			// Receive messages
-			mainConnection.on('data', function(data) {
-				console.log('Received', data);
-			});
-		});
-		
-		mainConnection.on('connection', function(conn){
-			// connection from other peer
-			console.log("Incoming connection received");
-			root.connectedPeers.push(conn);
-			
-			conn.on('data', function(data){
-				if (data.metadata && data.metadata.type) {
-					switch (data.metadata.type) {
-						case "handshake": // share data with the client
-							console.log("HANDSHAKE data received: ", data.metadata);
-							break;
-							
-						case "change": // run changes in-game
-							console.log("CHANGE data received: ", data.metadata.changes);
-							break;
-						
-						case "chat": // display message in chatroom
-							console.log("CHAT data received: ", data.metadata.message);
-							root.messages.push(new message(data.metadata));
-							
-							break;
-						
-						default:
-							console.log("unknown data received", data);
-					}
-					
-				}
-				else {
-					console.log("OTHER data received: ", data);
-				}
-			});
-			
-			// Errors connecting
-			conn.on('error', function(err){
-				console.log(err);
-			});
-		});
-		
-		
-		// runs every second
-		function runGame() {
-			if (root.connectedPeers().length > 0) {
-				broadcast({
-					metadata: {
-						type: 'position',
-						stamp: new Date().getTime(),
-						position: {
-							x: Math.floor(Math.random() * 1000),
-							y: Math.floor(Math.random() * 1000),
-							z: Math.floor(Math.random() * 1000)
-						},
-						rotation: {
-							pitch: Math.floor(Math.random() * 114),
-							yaw: Math.floor(Math.random() * 114)
-						}
-					}
-				});
-			}
-		}
-		
-		
-		$("#joinGame").on('click', function(){
-			var gameRoomID = $("#roomID").val().trim();
-			
-			// verify we haven't already connected to this client
-			var checkForAlreadyConnected = root.connectedPeers().find(function(x){
-				return x.peer === gameRoomID;
-			})
-			
-			if (checkForAlreadyConnected) {
-				alert("You're already connected");
-				return;
-			}
-			
-			// Start a connection, send the players name
-			var conn = mainConnection.connect(gameRoomID, {
-					metadata: {
-						type: 'handshake',
-						nickName: root.me.nickName()
-					}
-				});
-			
-			conn.on('open', function(id){
-				root.connectedPeers.push(conn);
-				conn.send({
-					metadata: {
-						type: 'handshake',
-						nickName: root.me.nickName()
-					}
-				});
-			});
-			conn.on('data', function(data) {
-				console.log("Data Received!", data);
-			});
-			
-			conn.on('close', function(data) {
-				debugger;
-				root.messages.push(new message({
-					type: "bt-chat--loggedOut",
-					nickName: conn.metadata.nickName,
-					message: "Logged out"
-				}));
-				delete root.connectedPeers.remove(conn);
-			});
-			
-			conn.on('error', function(err) {
-				peerError(err);
-			});
-		});
-		
-		// Make sure things clean up properly
-		window.onunload = window.onbeforeunload = function(e) {
-			if (!!mainConnection && !mainConnection.destroyed) {
-				mainConnection.destroy();
-			}
-		};
-		
-		
-		return root;
-	};
-	
-	var message = function(msg) {
-		var self = this;
-		
-		self.type = msg.type || "";
-		self.nickName = msg.nickName;
-		self.message = msg.message;
-		
-		return self;
-	};
-	
-	ko.applyBindings(new page());
-});

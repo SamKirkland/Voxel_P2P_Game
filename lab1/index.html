@@ -1,0 +1,59 @@
+﻿<html>
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <script src="/js/jquery-3.1.0.min.js"></script>
+        <link rel="stylesheet" href="/css/bootstrap.min.css">
+        <script src="/js/bootstrap.min.js"></script>
+        <link rel="stylesheet" href="/css/global.css">
+        <script src="/js/peer.js"></script>
+        <script src="/js/knockout-3.4.2.js"></script>
+
+        <script src="/js/private.js"></script>
+        <script src="/js/globalFunctions.js"></script>
+        <script src="/js/game.js"></script>
+
+        <script src="/lab1/lab1.js"></script>
+	</head>
+	<body>
+		<div class="container-fluid">
+			<div class="row">
+                <div class="col-xs-12">
+
+                    <game-welcome-screen params="
+						nickName: 'defaultName',
+                        skin: ko.observable(),
+						gameRoomName: 'we will populate this later'
+					"></game-welcome-screen>
+
+                </div>
+			</div>
+		</div>
+
+        <script>
+            $(document).ready(function () {
+
+                var pageVM = function () {
+                    var root = this;
+
+                    root.me = {
+                        id: ko.observable(GlobalFunctions.getRoomName()),
+                        nickName: ko.observable(),
+                        skin: ko.observable()
+                    };
+                    root.connectedPeers = ko.observableArray();
+
+                    return root;
+                };
+                window.rootVM = new pageVM();
+
+                $(document).ready(function () {
+                    ko.applyBindings(window.rootVM);
+                });
+
+            });
+        </script>
+	</body>
+</html>
