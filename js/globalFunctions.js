@@ -11,11 +11,9 @@ var GlobalFunctions = {
      * Call this when you're ready to start the game
      */
     startGame: function () {
-        if (window.enableGame) {
-            window.game.appendTo(document.body);
-            var $crossHair = $("<div class='crosshair'>+</div>");
-            $crossHair.appendTo(document.body);
-        }
+        window.game.appendTo(document.body);
+        var $crossHair = $("<div class='crosshair'>+</div>");
+        $crossHair.appendTo(document.body);
     },
 
     /**

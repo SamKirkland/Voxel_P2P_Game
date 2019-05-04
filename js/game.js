@@ -89,7 +89,7 @@ function bindEvents(connection, isMainConnection, initialDataToSend) {
 var gameEngine = {
     listenForConnections: function (gameRoomName) {
         // list for connections on gameRoomName
-        mainConnection = new Peer(gameRoomName, { key: window.peerJSApiKey });
+        mainConnection = new Peer(gameRoomName);
 
         bindEvents(mainConnection, true, {
             metadata: {
@@ -163,15 +163,11 @@ var gameEngine = {
 
             switch (data.metadata.type) {
                 case "handshake": // share data with the client
-                    if (window.enableGame) {
-                        window.game.emit("playerJoin", undefined, data.metadata);
-                    }
+                    window.game.emit("playerJoin", undefined, data.metadata);
                     break;
 
                 case "peerTransfer": // the server has sent over a list of peers, we need to connect to all of them
-                    if (window.enableGame) {
-                        window.game.emit("playerJoin", undefined, data.metadata);
-                    }
+                    window.game.emit("playerJoin", undefined, data.metadata);
 
                     // connect to each peer in the game
                     data.metadata.connectedPeers.forEach(function (p) {
@@ -180,15 +176,11 @@ var gameEngine = {
                     break
 
                 case "updatePlayer": // run changes in-game
-                    if (window.enableGame) {
-                        window.game.emit("updatePlayer", "playerID", data.metadata);
-                    }
+                    window.game.emit("updatePlayer", "playerID", data.metadata);
                     break;
 
                 case "updateBlock":
-                    if (window.enableGame) {
-                        window.game.emit("updateBlock", "playerID", data.metadata);
-                    }
+                    window.game.emit("updateBlock", "playerID", data.metadata);
                     break;
 
                 case "chat": // display message in chatroom

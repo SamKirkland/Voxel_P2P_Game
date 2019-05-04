@@ -1,7 +1,7 @@
 var skinVM = function(name, src, preview, selected) {
 	this.name = name;
 	this.src = src;
-	this.preview = "/skins/" + preview;
+	this.preview = "skins/" + preview;
 	this.isSelected = ko.observable(false || selected);
 	
 	return this;

@@ -1,7 +1,8 @@
 {
-  "name": "mygamename",
+  "name": "voxel_p2p_game",
   "version": "0.0.1",
   "scripts": {
+    "setup": "npm install",
     "start": "watchify mygame.js -o builtgame.js"
   },
   "dependencies": {
