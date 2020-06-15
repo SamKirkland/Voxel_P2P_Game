@@ -1,0 +1,36 @@
+.radioGroup {
+    display: flex;
+
+    label {
+        cursor: pointer;
+        flex: auto;
+    }
+
+    input {
+        display: none;
+    }
+
+    input + div {
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .2);
+        background: rgba(255, 255, 255, .2);
+
+        &:hover, &:focus {
+            background: #ffffff4d;
+        }
+
+        &:active {
+            background: #ffffff80;
+        }
+    }
+    input:checked + div {
+        background: rgba(255, 255, 255, .6);
+
+        &:hover, &:focus {
+            background: #ffffff4d;
+        }
+
+        &:active {
+            background: #ffffff80;
+        }
+    }
+}
