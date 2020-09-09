@@ -1,9 +1,7 @@
 {
-	"folders": [
-		{
-			"path": "."
-		}
-	],
+	"folders": [{
+		"path": "."
+	}],
 	"settings": {
 		"npm.enableScriptExplorer": true,
 		"scss.lint.duplicateProperties": "error",
@@ -16,13 +14,16 @@
 		"typescript.preferences.importModuleSpecifier": "non-relative",
 		"javascript.preferences.importModuleSpecifier": "non-relative",
 		"typescript.tsdk": "node_modules\\typescript\\lib",
-        "editor.detectIndentation": false,
-        "javascript.preferences.quoteStyle": "double",
-        "typescript.preferences.quoteStyle": "double",
-        "eslint.autoFixOnSave": true,
-        "editor.codeActionsOnSave": {
-            "source.fixAll.eslint": true
-        }
+		"editor.detectIndentation": false,
+		"javascript.preferences.quoteStyle": "double",
+		"typescript.preferences.quoteStyle": "double",
+		"eslint.autoFixOnSave": true,
+		"editor.codeActionsOnSave": {
+			"source.fixAll.eslint": true
+		},
+		"editor.formatOnPaste": true,
+		"editor.formatOnSave": true,
+		"editor.insertSpaces": false
 	},
 	"extensions": {
 		"recommendations": [
