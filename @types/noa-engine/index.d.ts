@@ -1,1 +1,1 @@
-declare module 'noa-engine';
+declare module "noa-engine";

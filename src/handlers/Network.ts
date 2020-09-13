@@ -1,3 +1,4 @@
+import ndarray from "ndarray";
 import { Coordinates } from "voxel-engine";
 
 export interface IPlayerSettings<keyType = string> {
@@ -19,9 +20,15 @@ interface IPlayers {
 	[key: string]: IPlayerServerState;
 }
 
+interface IChunks {
+	/** use getChunkID */
+	[key: string]: ndarray<Uint16Array> | undefined;
+}
+
 export interface IServerState {
 	players: IPlayers;
-	chat: IChatMessage[],
+	chat: IChatMessage[];
+	chunks: IChunks;
 }
 
 export interface IPlayerServerState {
@@ -87,7 +94,7 @@ export interface IEventHandlers {
 	chat: (message: IChatMessage) => void;
 	setChunk: (id: string, x: number, y: number, z: number, data: Uint16Array) => void;
 
-
+	chatHistory: (messages: IChatMessage[]) => void;
 
 	/**
 	 * Fires whenever ANY server state changes
@@ -101,6 +108,8 @@ export interface INetworkHandler {
 	on<EventKey extends keyof IEventHandlers>(event: EventKey, callback: IEventHandlers[EventKey]): void;
 
 	chat: (message: string) => void;
+
+	chatHistory: () => void;
 
 	readonly userID: string;
 

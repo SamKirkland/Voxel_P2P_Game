@@ -5,6 +5,7 @@ import ndarray from "ndarray";
 import { encode } from "voxel-crunch";
 import { IServerState, IChatMessage } from "./handlers/Network";
 import { Coordinates } from "voxel-engine";
+import { EventType } from "./handlers/SocketIOHandler";
 
 const server = http.createServer();
 
@@ -20,14 +21,16 @@ const io = socketIO(server, {
 
 const serverState: IServerState = {
 	players: {},
-	chat: []
+	chat: [],
+	chunks: {}
 };
 
 
 io.on("connection", (socket) => {
-	io.emit("userConnected", socket.id, [0, 0, 0]);
+	io.emit("userConnected" as EventType, socket.id, [0, 0, 0]);
 	console.log("a user connected", socket.id);
-	socket.emit("chat", { user: "server", content: "Welcome!" });
+	socket.emit("chat" as EventType, { user: "server", content: "Welcome!" });
+
 
 	serverState.players[socket.id] = {
 		name: "no idea",
@@ -42,23 +45,37 @@ io.on("connection", (socket) => {
 	};
 	stateUpdated();
 
-	socket.on("chat", (...message: string[]) => {
+	socket.on("chat" as EventType, (...message: string[]) => {
 		console.info("chat message received, broadcasting", message.join(""));
 		const newMessage: IChatMessage = { user: "no idea", content: message.join("") };
-		io.emit("chat", { user: "no idea", content: message.join("") });
+		socket.emit("chat" as EventType, { user: "no idea", content: message.join("") });
 
 		serverState.chat.push(newMessage);
 
 		stateUpdated();
 	});
 
-	socket.on("updateBlock", (material: number, position: Coordinates) => {
-		console.info("block updated", JSON.stringify(position));
-		io.emit("updateBlock", material, position);
+	socket.on("chatHistory" as EventType, () => {
+		// send down chat history before login
+		socket.emit("chatHistory" as EventType, serverState.chat);
 	});
 
-	socket.on("move", (newPosition: Coordinates, newRotation: number) => {
-		io.emit("move", socket.id, newPosition, newRotation);
+	socket.on("updateBlock" as EventType, (material: number, position: Coordinates) => {
+		const chunkPosition = {
+			x: Math.floor(position[0] / ChunkSize),
+			y: Math.floor(position[1] / ChunkSize),
+			z: Math.floor(position[2] / ChunkSize)
+		};
+		const chunkID = getChunkID(chunkPosition.x, chunkPosition.x, chunkPosition.x);
+
+		const data = serverState.chunks[chunkID]!;
+		data.set(position[0], position[1], position[2], material);
+
+		io.emit("updateBlock" as EventType, material, position);
+	});
+
+	socket.on("move" as EventType, (newPosition: Coordinates, newRotation: number) => {
+		io.emit("move" as EventType, socket.id, newPosition, newRotation);
 
 		const player = serverState.players[socket.id];
 		if (player) {
@@ -74,36 +91,63 @@ io.on("connection", (socket) => {
 		stateUpdated();
 	});
 
-	socket.on("getChunk", (id: string, x: number, y: number, z: number) => {
-		const newData = ndarray<Uint16Array>(new Uint16Array(ChunkSize * ChunkSize * ChunkSize), [ChunkSize, ChunkSize, ChunkSize]);
+	socket.on("getChunk" as EventType, (id: string, x: number, y: number, z: number) => {
+		const chunkData = getChunk(x, y, z);
+		const encodedData = encode(chunkData.data as Uint16Array);
 
-		for (var i = 0; i < newData.shape[0]; i++) {
-			for (var j = 0; j < newData.shape[1]; j++) {
-				for (var k = 0; k < newData.shape[2]; k++) {
-					var voxelID = getVoxelID(x + i, y + j, z + k);
-					newData.set(i, j, k, voxelID);
-				}
-			}
-		}
-		const encodedData = encode(newData.data as Uint16Array);
-
-		socket.emit("setChunk", id, x, y, z, encodedData);
+		socket.emit("setChunk" as EventType, id, x, y, z, encodedData);
 	});
 
 	/** return full current server state */
 	function stateUpdated() {
-		io.emit("serverStateUpdate", serverState);
+		socket.emit("serverStateUpdate" as EventType, {
+			players: serverState.players,
+			chat: serverState.chat
+		});
 	}
 
-	socket.on("disconnect", () => {
+	socket.on("disconnect" as EventType, () => {
 		console.log("user disconnected", socket.id);
-		io.emit("userDisconnected", socket.id, [0, 0, 0]);
+		io.emit("userDisconnected" as EventType, socket.id, [0, 0, 0]);
 
 		delete serverState.players[socket.id];
 
 		stateUpdated();
 	});
 });
+
+function getChunk(x: number, y: number, z: number): ndarray<Uint16Array> {
+	const chunkID = getChunkID(x, y, z);
+
+	// check if its in state first
+	let chunkData = serverState.chunks[chunkID];
+
+	if (chunkData === undefined) {
+		// generate chunk
+		chunkData = generateChunk(x, y, z);
+	}
+
+	return chunkData;
+}
+
+function generateChunk(x: number, y: number, z: number) {
+	const chunkData = ndarray<Uint16Array>(new Uint16Array(ChunkSize * ChunkSize * ChunkSize), [ChunkSize, ChunkSize, ChunkSize]);
+
+	for (var i = 0; i < chunkData.shape[0]; i++) {
+		for (var j = 0; j < chunkData.shape[1]; j++) {
+			for (var k = 0; k < chunkData.shape[2]; k++) {
+				var voxelID = getVoxelID(x + i, y + j, z + k);
+				chunkData.set(i, j, k, voxelID);
+			}
+		}
+	}
+
+	// save it to server state!
+	const chunkID = getChunkID(x, y, z);
+	serverState.chunks[chunkID] = chunkData;
+
+	return chunkData;
+}
 
 // simple height map worldgen function
 function getVoxelID(x: number, y: number, z: number) {
@@ -115,6 +159,10 @@ function getVoxelID(x: number, y: number, z: number) {
 		return 2;
 	}
 	return 0; // signifying empty space
+}
+
+function getChunkID(x: number, y: number, z: number): string {
+	return `${x}-${y}-${z}`;
 }
 
 

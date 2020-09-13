@@ -1,1 +1,1 @@
-declare module 'babylon-voxel-skybox';
+declare module "babylon-voxel-skybox";

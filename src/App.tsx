@@ -1,6 +1,6 @@
-import React, { Suspense } from 'react';
-import { WelcomeScreen } from './WelcomeScreen';
-const Admin = React.lazy(() => import('./Admin'));
+import React, { Suspense } from "react"
+const Admin = React.lazy(() => import("./Admin"));
+const WelcomeScreen = React.lazy(() => import("./WelcomeScreen"));
 
 const isAdminPage = window.location.pathname === "/admin";
 
@@ -14,7 +14,9 @@ function App() {
 	}
 
 	return (
-		<WelcomeScreen />
+		<Suspense fallback={<div>Loading...</div>}>
+			<WelcomeScreen />
+		</Suspense>
 	);
 }
 
