@@ -2,6 +2,8 @@
 
 Web based voxel P2P game.
 
+![(Deployed via FTP-Deploy-Action)](https://github.com/SamKirkland/Voxel_P2P_Game/workflows/🚀-Deploy-website-on-push/badge.svg)
+
 #### [Check out the DEMO!](http://voxel.samkirkland.com)
 
 ![GameMenu](preview/GameMenu.png)
