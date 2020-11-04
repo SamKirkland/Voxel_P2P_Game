@@ -14,3 +14,4 @@ jobs:
         server: ftp.samkirkland.com
         username: voxel-github-publish@voxel.samkirkland.com
         password: ${{ secrets.ftp_password }}
+        server-dir: FTP-Deploy-Action
